@@ -1,0 +1,88 @@
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;
+;      新核科技(广州)有限公司
+;
+;      Copyright (C) 2022 CoreKernel Technology Guangzhou Co., Ltd
+;
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;
+;      GPIO LED 线性汇编
+;
+;      2022年04月26日
+;
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;
+;    线性汇编工程
+;
+;    - 希望缄默(bin wang)
+;    - bin@corekernel.net
+;
+;    官网 corekernel.net/.org/.cn
+;    社区 fpga.net.cn
+;
+
+    .global		main                                 ; 全局符号
+
+main:	.cproc                                       ; 线性汇编程序开始
+
+; 变量声明
+		.reg	SYSCFG_PINMUX13_REG, GPIO_PINMUX
+		.reg	GPIO_DIR67_REG, GPIO_DIR67_VALUE
+		.reg	GPIO_OUT_DATA67_REG, GPIO_OUT_DATA67_VALUE
+		.reg	DELAY_VALUE
+
+; GPIO 管脚复用配置
+        MVKL	0x01C14154, SYSCFG_PINMUX13_REG      ; 系统配置模块（System Configuration (SYSCFG) Module）
+        MVKH	0x01C14154, SYSCFG_PINMUX13_REG      ; 管脚复用配置寄存器（PINMUX13）
+
+;                  LED2         LED3
+;                GPIO6[13]    GPIO6[12]
+        MVKL	((8 << 8) | (8 << 12)), GPIO_PINMUX
+        MVKH	((8 << 8) | (8 << 12)), GPIO_PINMUX
+
+        STW		GPIO_PINMUX, *SYSCFG_PINMUX13_REG    ; 赋值（存储字（WORD）到内存）
+
+; GPIO 管脚方向配置
+        MVKL	0x1E26088, GPIO_DIR67_REG            ; 通用输入输出口（General-Purpose Input/Output (GPIO)）
+        MVKH	0x1E26088, GPIO_DIR67_REG            ; GPIO Banks 6 和 7 管脚方向配置寄存器（DIR67）
+
+;                  LED2         LED3
+;                GPIO6[13]    GPIO6[12]
+        MVKL	((0 << 13) | (0 << 12)), GPIO_DIR67_VALUE
+        MVKH	((0 << 13) | (0 << 12)), GPIO_DIR67_VALUE
+
+        STW		GPIO_DIR67_VALUE, *GPIO_DIR67_REG    ; 赋值（存储字（WORD）到内存）
+
+; 延时值
+        MVKL	0x00FFFFFF, DELAY_VALUE
+        MVKH	0x00FFFFFF, DELAY_VALUE
+
+; GPIO 管脚输出配置
+        MVKL	0x1E2608C, GPIO_OUT_DATA67_REG       ; 通用输入输出口（General-Purpose Input/Output (GPIO)）
+        MVKH	0x1E2608C, GPIO_OUT_DATA67_REG       ; GPIO Banks 6 和 7 管脚输出配置寄存器（OUT_DATA67）
+
+; 主循环
+LED_Loop:
+        MVK		0x00003000, GPIO_OUT_DATA67_VALUE    ; LED2
+        STW		GPIO_OUT_DATA67_VALUE, *GPIO_OUT_DATA67_REG
+
+        .call delay(DELAY_VALUE)
+
+        MVK		0x00000000, GPIO_OUT_DATA67_VALUE    ; LED3
+        STW		GPIO_OUT_DATA67_VALUE, *GPIO_OUT_DATA67_REG
+
+        .call delay(DELAY_VALUE)
+
+        B		LED_Loop
+
+        .endproc                                     ; 线性汇编程序结束
+
+delay:	.cproc i                                     ; 线性汇编程序开始
+
+LOOP:
+    [i] SUB		i, 1, i                              ; 自减（i--）
+    [i] B		LOOP
+        .return
+
+        .endproc                                     ; 线性汇编程序结束

@@ -1,0 +1,60 @@
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;
+;      新核科技(广州)有限公司
+;
+;      Copyright (C) 2022 CoreKernel Technology Guangzhou Co., Ltd
+;
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;
+;      GPIO LED 线性汇编
+;
+;      2022年04月26日
+;
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;
+;    线性汇编工程
+;
+;    - 希望缄默(bin wang)
+;    - bin@corekernel.net
+;
+;    官网 corekernel.net/.org/.cn
+;    社区 fpga.net.cn
+;
+
+    .global		LEDInit                              ; 全局符号
+    .global		LEDControl                           ; 全局符号
+
+LEDInit:	.cproc                                   ; 线性汇编程序开始
+
+; 变量声明
+		.reg	GPIO_DIR67_REG, GPIO_DIR67_VALUE
+
+; GPIO 管脚方向配置
+        MVKL	0x1E26088, GPIO_DIR67_REG            ; 通用输入输出口（General-Purpose Input/Output (GPIO)）
+        MVKH	0x1E26088, GPIO_DIR67_REG            ; GPIO Banks 6 和 7 管脚方向配置寄存器（DIR67）
+
+;                  LED2         LED3
+;                GPIO6[13]    GPIO6[12]
+        MVKL	((0 << 13) | (0 << 12)), GPIO_DIR67_VALUE
+        MVKH	((0 << 13) | (0 << 12)), GPIO_DIR67_VALUE
+
+        STW		GPIO_DIR67_VALUE, *GPIO_DIR67_REG    ; 赋值（存储字（WORD）到内存）
+
+    .endproc                                         ; 线性汇编程序结束
+
+;                  参数      参数
+LEDControl:	.cproc LED, value                        ; 线性汇编程序开始
+
+; 变量声明
+		.reg	GPIO_OUT_DATA67_REG, GPIO_OUT_DATA67_VALUE
+
+; GPIO 管脚输出配置
+        MVKL	0x1E2608C, GPIO_OUT_DATA67_REG       ; 通用输入输出口（General-Purpose Input/Output (GPIO)）
+        MVKH	0x1E2608C, GPIO_OUT_DATA67_REG       ; GPIO Banks 6 和 7 管脚输出配置寄存器（OUT_DATA67）
+
+; GPIO 输出
+        SHL		value, LED, GPIO_OUT_DATA67_VALUE    ; 移位
+        STW		GPIO_OUT_DATA67_VALUE, *GPIO_OUT_DATA67_REG
+
+    .endproc                                         ; 线性汇编程序结束
